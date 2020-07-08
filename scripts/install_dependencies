@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+yum remove -y java-1.7*
+yum install -y java-1.8.0-openjdk-devel
+yum list install java*
+
+# these are left as an example of items that could be better handled as part of
+# golden ami creation, rather than at scale up / deploy time

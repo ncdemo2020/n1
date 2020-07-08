@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+TEMP_STAGING_DIR='/tmp/codedeploy-deployment-staging-area'
+
+JAR_STAGED_LOCATION="$TEMP_STAGING_DIR/spring-0.0.1-SNAPSHOT.jar"
+
+
+chmod 700 /root/dbcredlookup
+dbcreds=$(/root/dbcredlookup | jq -r '.SecretString | fromjson')
+
+username=$(echo $dbcreds | jq -r .username)
+password=$(echo $dbcreds | jq -r .password)
+host=$(echo $dbcreds | jq -r .host)
+port=$(echo $dbcreds | jq -r .port)
+
+yum install -y mysql
+mysql -u$username -p$password -h$host -e "create database notejam" 2>&1 || true
+
+su ec2-user -c "nohup java -Dspring.profiles.active=production \
+    -Dspring.datasource.tomcat.max-active=1 \
+    -Dspring.jpa.hibernate.ddl-auto=update \
+    -Dspring.datasource.url=jdbc:mysql://$host:$port/notejam \
+    -Dspring.datasource.username=$username \
+    -Dspring.datasource.password=$password \
+    -jar /tmp/codedeploy-deployment-staging-area/spring-0.0.1-SNAPSHOT.jar &>/dev/null &"
+
